@@ -19,9 +19,9 @@ limitations under the License.
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<9> INTF_IN = 0;
-const bit<9> INTF_MONITOR = 1;
-const bit<9> INTF_OUT = 2;
+const bit<9> INTF0 = 0;
+const bit<9> INTF1 = 1;
+const bit<9> INTF_MONITOR = 2;
 
 /*
  * This value will be used in the mirroring_add command together with
@@ -143,7 +143,11 @@ control ingress(inout headers_t hdr,
 {
     action forward() {
         clone3(CloneType.I2E, I2E_CLONE_SESSION_ID, standard_metadata);
-        standard_metadata.egress_spec = INTF_OUT;
+        if (standard_metadata.ingress_port == INTF0) {
+            standard_metadata.egress_spec = INTF1;
+        } else if (standard_metadata.ingress_port == INTF1) {
+            standard_metadata.egress_spec = INTF0;
+        } // XXX: else what happens?
     }
 
     table flow_blocklist {
