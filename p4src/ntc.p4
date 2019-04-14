@@ -19,6 +19,17 @@ limitations under the License.
 #include <core.p4>
 #include <v1model.p4>
 
+const bit<9> INTF_IN = 0;
+const bit<9> INTF_MONITOR = 1;
+const bit<9> INTF_OUT = 2;
+
+/*
+ * This value will be used in the mirroring_add command together with
+ * INTF_MONITOR to specify that the mirrored packets will go to interface with
+ * number INTF_MONITOR.
+ */
+const bit<32> I2E_CLONE_SESSION_ID = 5;
+
 /* IP protocols */
 const bit<8> IP_PROTOCOLS_ICMP       =   1;
 const bit<8> IP_PROTOCOLS_IGMP       =   2;
@@ -130,7 +141,29 @@ control ingress(inout headers_t hdr,
                 inout meta_t meta,
                 inout standard_metadata_t standard_metadata)
 {
+    action forward() {
+        clone3(CloneType.I2E, I2E_CLONE_SESSION_ID, standard_metadata);
+        standard_metadata.egress_spec = INTF_OUT;
+    }
+
+    table flow_blocklist {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact;
+            /*
+             * TODO: Find out how to deal with multiple types of headers,
+             * i.e. TCP or UDP header.
+             */
+        }
+        actions = {
+            forward;
+            my_drop;
+        }
+        default_action = forward;
+    }
+
     apply {
+        flow_blocklist.apply();
     }
 }
 
