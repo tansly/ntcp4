@@ -10,6 +10,7 @@ ip netns exec $NS ip link set lo up
 ip netns exec $NS ip addr add $IPADDR dev $VETH
 ip netns exec $NS ip link set $VETH up
 ip netns exec $NS ip r add default via 192.168.6.1
+ip netns exec $NS ethtool --offload $VETH rx off tx off gso off
 
 # Monitor device
 NS=ns2
@@ -20,10 +21,12 @@ ip link set $VETH netns $NS
 ip netns exec $NS ip link set lo up
 ip netns exec $NS ip addr add $IPADDR dev $VETH
 ip netns exec $NS ip link set $VETH up
+ip netns exec $NS ethtool --offload $VETH rx off tx off gso off
 
 # Router
 ip addr add 192.168.6.1/24 dev veth3
 ip l set veth3 up
 echo 1 > /proc/sys/net/ipv4/conf/veth3/forwarding
 echo 1 > /proc/sys/net/ipv4/conf/enp0s3/forwarding
+# Instead of proxy ARP, may consider masquerading
 echo 1 > /proc/sys/net/ipv4/conf/enp0s3/proxy_arp
