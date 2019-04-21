@@ -80,7 +80,11 @@ ip netns exec $NS ethtool --offload $VETH rx off tx off gso off
 # Router
 ip addr add 192.168.6.1/24 dev veth3
 ip l set veth3 up
+ethtool --offload veth3 rx off tx off gso off
 echo 1 > /proc/sys/net/ipv4/conf/veth3/forwarding
 echo 1 > /proc/sys/net/ipv4/conf/enp0s3/forwarding
 # Instead of proxy ARP, may consider masquerading
 echo 1 > /proc/sys/net/ipv4/conf/enp0s3/proxy_arp
+
+# XXX: There are some connectivity problems probably related to the path MTU/fragmentation.
+# These may just be the symptoms, though.
