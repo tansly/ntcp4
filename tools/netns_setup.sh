@@ -1,5 +1,41 @@
 #!/bin/bash
 
+# The topology:
+#                                      +------------------------+
+#                                      |                        |
+#                                      |      Namespace ns2     |
+#                                      |                        |
+#                                      |      +-----------+     |
+#                                      |      |           |     |
+#                                      |      |  Monitor  |     |
+#                                      |      |           |     |
+#                                      |      +-----------+     |
+#                                      |            +veth5      |
+#                                      |            |           |
+#                                      +------------------------+
+#                                                   |
+#                                                   |
+#                                                   |
+#   +-------------------------+        +--------------------------+       +-------------------------------+
+#   |                         |        |            |             |       |                               |
+#   |                         |        |            +veth4        |       |                               |
+#   |                         |        |   +------------------+   |       |         +-----------+         |
+#   |       +--------+        |        |   |                  |   |       |         |           |         |
+#   |       |        +veth1   |        |   |                  |   |       |         |  "Router" |         |    Internet
+#   |       |  Host  +---------------------+    Middlebox     +---------------------+           +-------------------+
+#   |       |        |        |        |   veth0          veth2   |       |   veth3 |           |         |
+#   |       +--------+        |        |   |                  |   |       |         +-----------+         |
+#   |                         |        |   +------------------+   |       |                               |
+#   |                         |        |                          |       |                               |
+#   |     Namesepace ns0      |        |      Namespace ns1       |       |         Init namespace        |
+#   |                         |        |                          |       |                               |
+#   +-------------------------+        +--------------------------+       +-------------------------------+
+#
+# The middlebox is a device that is deployed in front of a router.
+# In this particular topology, there is only one host, but one can generalize
+# this by adding more interfaces to it and implementing L2 switching in the P4 program.
+
+
 # Client device
 # The other end of veth1 (that is, veth0) is the P4 middlebox.
 NS=ns0
