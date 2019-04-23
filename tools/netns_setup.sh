@@ -6,25 +6,25 @@
 #                                      |      Namespace ns2     |
 #                                      |                        |
 #                                      |      +-----------+     |
-#                                      |      |           |     |
-#                                      |      |  Monitor  |     |
-#                                      |      |           |     |
-#                                      |      +-----------+     |
-#                                      |            +veth5      |
-#                                      |            |           |
+#                                      | veth7|           |     |
+#                                      |    +-+  Monitor  |     |
+#                                      |    | |           |     |
+#                                      |    | +-----^-----+     |
+#                                      |    |       +veth5      |
+#                                      |    |       |           |
 #                                      +------------------------+
-#                                                   |
-#                                                   |
-#                                                   |
+#                                           |       |
+#                                 Management|       |Monitor
+#                                 interface |       |interface
 #   +-------------------------+        +--------------------------+       +-------------------------------+
-#   |                         |        |            |             |       |                               |
-#   |                         |        |            +veth4        |       |                               |
+#   |                         |        |    |       |             |       |                               |
+#   |                         |        |    +veth6  +veth4        |       |                               |
 #   |                         |        |   +------------------+   |       |         +-----------+         |
 #   |       +--------+        |        |   |                  |   |       |         |           |         |
 #   |       |        +veth1   |        |   |                  |   |       |         |  "Router" |         |    Internet
 #   |       |  Host  +---------------------+    Middlebox     +---------------------+           +-------------------+
 #   |       |        |        |        |   veth0          veth2   |       |   veth3 |           |         |
-#   |       +--------+        |        |   |                  |   |       |         +-----------+         |
+#   |       +--------+        |        |   |                  +   |       |         +-----------+         |
 #   |                         |        |   +------------------+   |       |                               |
 #   |                         |        |                          |       |                               |
 #   |     Namesepace ns0      |        |      Namespace ns1       |       |         Init namespace        |
@@ -37,10 +37,9 @@
 
 
 # Client device
-# The other end of veth1 (that is, veth0) is the P4 middlebox.
 NS=ns0
 IPADDR=192.168.6.10/24
-VETH=veth1
+VETH=veth1 # The other end of veth1 (that is, veth0) is the P4 middlebox.
 ip netns add $NS
 ip link set $VETH netns $NS
 ip netns exec $NS ip link set lo up
@@ -57,6 +56,7 @@ ip netns exec $NS ethtool --offload $VETH rx off tx off gso off
 # the packets to the correct interface. See the P4 program for details.
 NS=ns1
 ip netns add $NS
+# Forwarding/cloning interfaces
 ip link set veth0 netns $NS
 ip link set veth2 netns $NS
 ip link set veth4 netns $NS
@@ -64,18 +64,26 @@ ip netns exec $NS ip link set lo up
 ip netns exec $NS ip link set veth0 up
 ip netns exec $NS ip link set veth2 up
 ip netns exec $NS ip link set veth4 up
+# Management interface, for remote management from the monitor device
+ip link set veth6 netns $NS
+ip netns exec $NS ip addr add 192.168.6.99/24 dev veth6
+ip netns exec $NS ip link set veth6 up
 
 # Monitor device
 # The other end of veth5 (that is, veth4) is the middlebox.
 NS=ns2
-IPADDR=192.168.6.66/24
 VETH=veth5
 ip netns add $NS
 ip link set $VETH netns $NS
 ip netns exec $NS ip link set lo up
-ip netns exec $NS ip addr add $IPADDR dev $VETH
 ip netns exec $NS ip link set $VETH up
 ip netns exec $NS ethtool --offload $VETH rx off tx off gso off
+# Set up the management interface
+IPADDR_MGMT=192.168.6.66/24
+VETH_MGMT=veth7
+ip link set $VETH_MGMT netns $NS
+ip netns exec $NS ip addr add $IPADDR_MGMT dev $VETH_MGMT
+ip netns exec $NS ip link set $VETH_MGMT up
 
 # Router
 ip addr add 192.168.6.1/24 dev veth3
