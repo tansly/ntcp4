@@ -150,7 +150,7 @@ control ingress(inout headers_t hdr,
         } // XXX: else what happens?
     }
 
-    table flow_blocklist {
+    table blocklist {
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
@@ -167,7 +167,7 @@ control ingress(inout headers_t hdr,
     }
 
     apply {
-        flow_blocklist.apply();
+        blocklist.apply();
     }
 }
 
