@@ -148,17 +148,29 @@ control ingress(inout headers_t hdr,
             standard_metadata.egress_spec = INTF1;
         } else if (standard_metadata.ingress_port == INTF1) {
             standard_metadata.egress_spec = INTF0;
-        } // XXX: else what happens?
+        }
     }
 
-    table blocklist {
+    table blocklist_tcp {
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
-            /*
-             * TODO: Find out how to deal with multiple types of headers,
-             * i.e. TCP or UDP header.
-             */
+            hdr.tcp.srcPort: exact;
+            hdr.tcp.dstPort: exact;
+        }
+        actions = {
+            forward;
+            my_drop;
+        }
+        default_action = forward;
+    }
+
+    table blocklist_udp {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact;
+            hdr.udp.srcPort: exact;
+            hdr.udp.dstPort: exact;
         }
         actions = {
             forward;
@@ -168,7 +180,25 @@ control ingress(inout headers_t hdr,
     }
 
     apply {
-        blocklist.apply();
+        if (hdr.tcp.isValid()) {
+            blocklist_tcp.apply();
+        } else if (hdr.udp.isValid()) {
+            blocklist_udp.apply();
+        } else {
+            /*
+             * The parser only accepts TCP, UDP and ICMP.
+             * Therefore, if neither the TCP nor the UDP header is valid,
+             * the packet is an ICMP packet. So we just forward it.
+             *
+             * For some reason, I thought it was not possible to directly
+             * invoke actions like this. But the following works, apparently.
+             *
+             * As far as I can tell, the p4 compiler internally generates
+             * an empty table named `tbl_forward` and the `forward` action
+             * is actually invoked by this table.
+             */
+            forward();
+        }
     }
 }
 
