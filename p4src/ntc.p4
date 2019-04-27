@@ -124,6 +124,7 @@ parser ParserImpl(packet_in packet,
         transition select(hdr.ipv4.protocol) {
             IP_PROTOCOLS_TCP: parse_tcp;
             IP_PROTOCOLS_UDP: parse_udp;
+            IP_PROTOCOLS_ICMP: accept;
             // Reject all other protocols
         }
     }
