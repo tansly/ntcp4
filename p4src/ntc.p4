@@ -116,7 +116,7 @@ parser ParserImpl(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             ETHERTYPE_IPV4: parse_ipv4;
-            default: accept;
+            // Reject all other protocols
         }
     }
     state parse_ipv4 {
@@ -124,7 +124,7 @@ parser ParserImpl(packet_in packet,
         transition select(hdr.ipv4.protocol) {
             IP_PROTOCOLS_TCP: parse_tcp;
             IP_PROTOCOLS_UDP: parse_udp;
-            default: accept;
+            // Reject all other protocols
         }
     }
     state parse_tcp {
