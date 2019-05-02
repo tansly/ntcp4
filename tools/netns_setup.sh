@@ -35,6 +35,22 @@
 # In this particular topology, there is only one host, but one can generalize
 # this by adding more interfaces to it and implementing L2 switching in the P4 program.
 
+# XXX: Don't ask me why I disable segmentation offloading (ethtool commands).
+# When I do not, I got a lot of TCP/UDP packets with bogus checksums that are dropped
+# by the network stack, thus not reaching the application running at the host.
+# I think that the kernel does not compute checksums for packets going through
+# veth interfaces (which makes sense as it is a waste of time) when offloading
+# is enabled. When offloading is disabled, the checksums are computed, though.
+#
+# The thing is, when there is no P4 middlebox, packets without proper checksums
+# do not cause any problems, but when I place the middlebox in the middle, those packets
+# get dropped somewhere in the kernel. I don't exactly understand what happens
+# but I think when the middlebox forwards the packets artificially (by using raw
+# sockets, probably) they interact with the kernel in a way I don't expect and get dropped.
+#
+# I'll try checking the kernel source to see what is put in place of the checksums
+# and how they are checked (when offloading is enabled) to understand where/why
+# they are dropped exactly.
 
 # Client device
 NS=ns0
@@ -95,4 +111,3 @@ echo 1 > /proc/sys/net/ipv4/conf/enp0s3/forwarding
 echo 1 > /proc/sys/net/ipv4/conf/enp0s3/proxy_arp
 
 # XXX: There are some connectivity problems probably related to the path MTU/fragmentation.
-# These may just be the symptoms, though.
