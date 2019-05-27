@@ -98,10 +98,6 @@ struct meta_t {
     /* empty */
 }
 
-action my_drop() {
-    mark_to_drop();
-}
-
 parser ParserImpl(packet_in packet,
                   out headers_t hdr,
                   inout meta_t meta,
@@ -150,6 +146,10 @@ control ingress(inout headers_t hdr,
         } // XXX: else what happens?
     }
 
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
     table blocklist {
         key = {
             hdr.ipv4.srcAddr: exact;
@@ -161,7 +161,7 @@ control ingress(inout headers_t hdr,
         }
         actions = {
             forward;
-            my_drop;
+            drop;
         }
         default_action = forward;
     }
