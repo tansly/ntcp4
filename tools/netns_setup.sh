@@ -108,6 +108,6 @@ ethtool --offload veth3 rx off tx off gso off
 echo 1 > /proc/sys/net/ipv4/conf/veth3/forwarding
 echo 1 > /proc/sys/net/ipv4/conf/enp0s3/forwarding
 # Instead of proxy ARP, may consider masquerading
-echo 1 > /proc/sys/net/ipv4/conf/enp0s3/proxy_arp
+iptables -t nat -A POSTROUTING -o enp0s3 -j MASQUERADE
 
 # XXX: There are some connectivity problems probably related to the path MTU/fragmentation.
