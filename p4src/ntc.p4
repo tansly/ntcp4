@@ -112,7 +112,7 @@ parser ParserImpl(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             ETHERTYPE_IPV4: parse_ipv4;
-            default: accept;
+            // Reject all other protocols
         }
     }
     state parse_ipv4 {
@@ -120,7 +120,8 @@ parser ParserImpl(packet_in packet,
         transition select(hdr.ipv4.protocol) {
             IP_PROTOCOLS_TCP: parse_tcp;
             IP_PROTOCOLS_UDP: parse_udp;
-            default: accept;
+            IP_PROTOCOLS_ICMP: accept;
+            // Reject all other protocols
         }
     }
     state parse_tcp {
@@ -143,21 +144,45 @@ control ingress(inout headers_t hdr,
             standard_metadata.egress_spec = INTF1;
         } else if (standard_metadata.ingress_port == INTF1) {
             standard_metadata.egress_spec = INTF0;
-        } // XXX: else what happens?
+        }
     }
 
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
-    table blocklist {
+    table blocklist_icmp {
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
-            /*
-             * TODO: Find out how to deal with multiple types of headers,
-             * i.e. TCP or UDP header.
-             */
+        }
+        actions = {
+            forward;
+            drop;
+        }
+        default_action = forward;
+    }
+
+    table blocklist_tcp {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.tcp.srcPort: exact;
+            hdr.ipv4.dstAddr: exact;
+            hdr.tcp.dstPort: exact;
+        }
+        actions = {
+            forward;
+            drop;
+        }
+        default_action = forward;
+    }
+
+    table blocklist_udp {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.udp.srcPort: exact;
+            hdr.ipv4.dstAddr: exact;
+            hdr.udp.dstPort: exact;
         }
         actions = {
             forward;
@@ -167,7 +192,18 @@ control ingress(inout headers_t hdr,
     }
 
     apply {
-        blocklist.apply();
+        if (hdr.tcp.isValid()) {
+            blocklist_tcp.apply();
+        } else if (hdr.udp.isValid()) {
+            blocklist_udp.apply();
+        } else {
+            /*
+             * The parser only accepts TCP, UDP and ICMP.
+             * Therefore, if neither the TCP nor the UDP header is valid,
+             * the packet is an ICMP packet.
+             */
+            blocklist_icmp.apply();
+        }
     }
 }
 
